@@ -118,6 +118,7 @@ if (isset($_GET['logout'])) {
             box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
             display: flex;
             flex-direction: column;
+            overflow-x: auto;
         }
 
         .summary-box {
@@ -154,19 +155,25 @@ if (isset($_GET['logout'])) {
             color: #fff;
         }
 
-        #record-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
+        table {
+            width: 100%;
+            border-collapse: collapse;
             font-size: 14px;
         }
 
-        .record-item {
-            background: rgba(255, 255, 255, 0.15);
-            padding: 10px 15px;
-            border-radius: 10px;
+        thead {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
             color: #fff;
-            font-size: 14px;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: rgba(255, 255, 255, 0.05);
         }
 
         @media (max-width: 1000px) {
@@ -219,20 +226,52 @@ if (isset($_GET['logout'])) {
         <div class="summary-wrapper">
             <!-- Left Summary Section -->
             <div class="summary-section" id="summary-section">
-                <div class="summary-box"><h2>-</h2><p>Total Calm Periods</p></div>
-                <div class="summary-box"><h2>-</h2><p>Total Crying Instances</p></div>
-                <div class="summary-box"><h2>-</h2><p>Average Temperature (°C)</p></div>
-                <div class="summary-box"><h2>-</h2><p>Average Humidity (%)</p></div>
-                <div class="summary-box"><h2>-</h2><p>Average Movement</p></div>
-                <div class="summary-box"><h2>-</h2><p>Last Activity</p></div>
+                <div class="summary-box">
+                    <h2>-</h2>
+                    <p>Total Calm Periods</p>
+                </div>
+                <div class="summary-box">
+                    <h2>-</h2>
+                    <p>Total Crying Instances</p>
+                </div>
+                <div class="summary-box">
+                    <h2>-</h2>
+                    <p>Average Temperature (°C)</p>
+                </div>
+                <div class="summary-box">
+                    <h2>-</h2>
+                    <p>Average Humidity (%)</p>
+                </div>
+                <div class="summary-box">
+                    <h2>-</h2>
+                    <p>Average Movement</p>
+                </div>
+                <div class="summary-box">
+                    <h2>-</h2>
+                    <p>Last Activity</p>
+                </div>
             </div>
 
             <!-- Right Records Section -->
             <div class="summary-section placeholder">
                 <div class="record-list-title">Recent Baby Status</div>
-                <div id="record-list">
-                    <p>Loading records...</p>
-                </div>
+                <table id="record-table">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Status</th>
+                            <th>Temperature (°C)</th>
+                            <th>Humidity (%)</th>
+                            <th>Sound</th>
+                            <th>Motion</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="6">Loading records...</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -262,50 +301,46 @@ if (isset($_GET['logout'])) {
                 .catch(error => {
                     console.error('Error fetching summary:', error);
                 });
-        }  
+        }
 
         function fetchRecords() {
             fetch('summary_records.php')
                 .then(response => response.json())
                 .then(records => {
-                    const list = document.getElementById('record-list');
-                    list.innerHTML = ''; // Clear previous records
+                    const tbody = document.getElementById('record-table').querySelector('tbody');
+                    tbody.innerHTML = ''; // Clear previous rows
 
-                    if (records.length === 0) {
-                        list.innerHTML = '<p>No recent records found.</p>';
+                    if (!records || records.length === 0) {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `<td colspan="6">No recent records found.</td>`;
+                        tbody.appendChild(row);
                         return;
                     }
 
                     records.forEach(rec => {
-                        const item = document.createElement('div');
-                        item.className = 'record-item';
-                       /*  item.innerHTML = `
-                            <strong>${new Date(rec.timestamp).toLocaleString()}</strong><br>
-                            Status: ${rec.baby_status} <br>
-                            Temp: ${parseFloat(rec.temperature).toFixed(1)}°C, 
-                            Humidity: ${parseFloat(rec.humidity).toFixed(1)}%, 
-                            Sound: ${rec.sound_level}, 
-                            Motion: ${rec.motion}
-                        `; */
-                        item.innerHTML = `
-                            <strong>${new Date(rec.timestamp).toLocaleString()}</strong><br>
-                            Status: ${rec.baby_status} <br>        
-                            Sound: ${rec.sound}, 
-                            Motion: ${rec.movement_status}
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${new Date(rec.timestamp).toLocaleString()}</td>
+                            <td>${rec.baby_status}</td>
+                            <td>${parseFloat(rec.temperature).toFixed(1)}</td>
+                            <td>${parseFloat(rec.humidity).toFixed(1)}</td>
+                            <td>${rec.sound}</td>
+                            <td>${rec.movement_status}</td>
                         `;
-                        list.appendChild(item);
+                        tbody.appendChild(row);
                     });
                 })
                 .catch(err => {
                     console.error('Error fetching records:', err);
-                    document.getElementById('record-list').innerHTML = '<p>Error loading records.</p>';
+                    const tbody = document.getElementById('record-table').querySelector('tbody');
+                    tbody.innerHTML = '<tr><td colspan="6">Error loading records.</td></tr>';
                 });
         }
 
         fetchSummary();
         fetchRecords();
-        setInterval(fetchSummary, 5000);
-        setInterval(fetchRecords, 5000);
+        setInterval(fetchSummary, 3000);
+        setInterval(fetchRecords, 3000);
     </script>
 </body>
 

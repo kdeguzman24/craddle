@@ -31,8 +31,8 @@ if ($sensor_result && $sensor_result->num_rows > 0) {
         $baby_status = ((float)$sound > 300) ? "Crying" : "Calm";
     }
 
-    if (isset($sensor_row['movement'])) {
-        $movement_status = ($sensor_row['movement'] == 1) ? "Moving" : "Still";
+    if (isset($sensor_row['movement_status'])) {
+        $movement_status = $sensor_row['movement_status'];
     }
 }
 
@@ -41,6 +41,7 @@ $mysqli->close();
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>DreamNest Dashboard</title>
@@ -203,12 +204,12 @@ $mysqli->close();
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         }
 
-        input:checked + .slider {
+        input:checked+.slider {
             background-color: rgba(102, 187, 106, 0.4);
             box-shadow: 0 0 12px rgba(102, 187, 106, 0.8);
         }
 
-        input:checked + .slider:before {
+        input:checked+.slider:before {
             transform: translateX(28px);
         }
 
@@ -250,7 +251,7 @@ $mysqli->close();
         <div class="dashboard">
             <div class="card video-card">
                 <h3>Live Video Stream</h3>
-                <img id="live-stream" src="http://192.168.68.129:81/stream" alt="Live ESP32-CAM baby monitor stream">
+                <img id="live-stream" src="http://172.20.10.13:81/stream" alt="Live ESP32-CAM baby monitor stream">
                 <p id="error-message" style="display: none;">Failed to load stream.</p>
             </div>
 
@@ -263,13 +264,6 @@ $mysqli->close();
                     <div class="sensor-item"><span class="label">Baby Status</span><span class="value" id="baby-status"><?php echo htmlspecialchars($baby_status); ?></span></div>
                     <div class="sensor-item full-width-center"><span class="label">Movement Status</span><span class="value" id="movement-status"><?php echo htmlspecialchars($movement_status); ?></span></div>
                 </div>
-                <div class="toggle-wrapper">
-                    <label class="switch">
-                        <input type="checkbox" id="toy-control" onchange="toggleToy(this.checked)">
-                        <span class="slider"></span>
-                    </label>
-                    <span class="toggle-label">Swing</span>
-                </div>
             </div>
 
             <div class="card">
@@ -278,34 +272,13 @@ $mysqli->close();
             </div>
 
             <div class="card">
-                <h3>High Temperature (>30°C)</h3>
+                <h3> Temperature)</h3>
                 <canvas id="tempChart" width="400" height="400"></canvas>
             </div>
         </div>
     </div>
 
     <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            fetchToyStatus();
-            setInterval(fetchToyStatus, 1000);
-        });
-
-        function toggleToy(isChecked) {
-            fetch("update_toy_status.php", {
-                method: "POST",
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: "status=" + (isChecked ? "on" : "off")
-            });
-        }
-
-        function fetchToyStatus() {
-            fetch('toy_status.txt?ts=' + new Date().getTime())
-                .then(response => response.text())
-                .then(status => {
-                    document.getElementById("toy-control").checked = status.trim() === "on";
-                });
-        }
-
         function updateClock() {
             const now = new Date();
             document.getElementById('clock').textContent = now.toLocaleTimeString('en-GB');
@@ -322,10 +295,13 @@ $mysqli->close();
                     document.getElementById('humidity').textContent = data.humidity;
                     document.getElementById('baby-status').textContent = data.baby_status;
                     document.getElementById('movement-status').textContent = data.movement_status;
+                })
+                .catch(err => {
+                    console.error("Failed to fetch data:", err);
+                    document.getElementById('error-message').style.display = "block";
                 });
         }
 
-        
         function loadCryingChart() {
             fetch('chart_data.php')
                 .then(response => response.json())
@@ -395,7 +371,7 @@ $mysqli->close();
                         data: {
                             labels: hours,
                             datasets: [{
-                                label: 'Temperature > 30°C',
+                                label: 'Temperature ',
                                 data: hotData,
                                 borderColor: 'rgba(255, 206, 86, 1)',
                                 backgroundColor: 'rgba(255, 206, 86, 0.3)',
@@ -442,11 +418,12 @@ $mysqli->close();
                 })
                 .catch(error => console.error("Temp chart data error:", error));
         }
-
         fetchData();
-        setInterval(fetchData, 1000);
         loadCryingChart();
         loadTempChart();
+        // Reduced interval for performance
+        setInterval(fetchData, 1000);
     </script>
 </body>
+
 </html>

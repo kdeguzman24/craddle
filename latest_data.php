@@ -17,7 +17,7 @@ $data = [
     'baby_status' => 'Unknown',
     'movement_status' => 'Unknown',
     'stream_url' => '',
-    'timestamp' => null // Optional: Include timestamp of the latest data
+    'timestamp' => null
 ];
 
 // Fetch latest sensor data
@@ -33,20 +33,35 @@ if ($sensor_result && $sensor_result->num_rows > 0) {
     $data['humidity'] = $row['humidity'];
     $data['timestamp'] = $row['timestamp'];
 
-    // Handle movement status
-    $movement = strtolower(trim($row['movement_status'] ?? ''));
-    if ($movement === '1' || $movement === 'moving') {
+    // DEBUG: log raw movement value
+    error_log("Movement raw value from DB: " . print_r($row['movement'] ?? '(null)', true));
+
+    // Handle movement status (assuming movement column stores 1 or 0)
+    $movement_val = $row['movement'] ?? null;
+
+    if ($movement_val === null) {
+        $data['movement_status'] = 'Unknown';
+    } elseif ($movement_val == 1) {
         $data['movement_status'] = 'Moving';
-    } elseif ($movement === '0' || $movement === 'still') {
+    } elseif ($movement_val == 0) {
         $data['movement_status'] = 'Still';
     } else {
-        $data['movement_status'] = 'Unknown';
+        // Just in case you have string values, fallback check
+        $movement_str = strtolower(trim($movement_val));
+        if ($movement_str === 'moving') {
+            $data['movement_status'] = 'Moving';
+        } elseif ($movement_str === 'still') {
+            $data['movement_status'] = 'Still';
+        } else {
+            $data['movement_status'] = 'Unknown';
+        }
     }
 
     // Determine baby status based on sound
     if (is_numeric($sound_raw)) {
         $sound_value = (float)$sound_raw;
-        $data['baby_status'] = ($sound_value > 400) ? 'Crying' : 'Calm';
+        // Adjust threshold here as needed
+        $data['baby_status'] = ($sound_value > 300) ? 'Crying' : 'Calm';
     } else {
         $sound_str = strtolower(trim($sound_raw));
         if ($sound_str === 'crying') {
@@ -79,4 +94,3 @@ $mysqli->close();
 // Output as JSON
 header('Content-Type: application/json');
 echo json_encode($data);
-?>
